@@ -1,211 +1,160 @@
-# Intelli-Credit (Advanced Prototype)
+<div align="center">
 
-AI-powered corporate credit appraisal engine for Indian lending workflows.
+# Intelli-Credit
 
-This repository now contains:
-- A production-style FastAPI backend with `/api/v1` endpoints
-- End-to-end ingestion -> research -> ML scoring -> CAM generation pipeline
-- Structured JSON response envelope + request tracing
-- Advanced dashboard pages and visualizations in frontend
-- Dockerized local stack (Postgres, Qdrant, Redis, Backend, Worker, Frontend)
-- Sample data generation for **Vardhman Agri Processing Pvt. Ltd.**
+### AI-Powered Corporate Credit Appraisal Engine for Indian Lending
 
-## What Is Implemented
+*Turns a pile of raw borrower documents into an explainable credit decision and a bank-ready Credit Appraisal Memo (CAM) — with live web due-diligence and human-in-the-loop review.*
 
-### Backend
-- `backend/core/ingestion`
-  - `pdf_parser.py`: fitz + pdfplumber + **Qwen2.5-VL OCR** fallback
-  - `gst_parser.py`: GSTR parsing + ITC mismatch analyzer
-  - `bank_statement.py`: banking pattern/anomaly extraction
-  - `itr_parser.py`: ITR JSON parser
-  - `cross_validator.py`: cross-source consistency report
-- `backend/core/research`
-  - `web_agent.py`: autonomous research orchestration with `mock` + `live` mode
-  - `firecrawl_client.py`: Firecrawl SDK wrapper with retries
-  - `finding_extractor.py`: LLM-powered finding extraction (Hugging Face free model default)
-  - `search_strategies.py`: India-focused research query templates
-  - `research_to_delta.py`: CAM research narrative synthesis
-  - MCA, eCourts, news and promoter intelligence modules
-  - Due diligence note intelligence parser (`due_diligence_ai.py`)
-- `backend/databricks`
-  - `spark_session.py`: local Spark/Delta or Databricks Connect
-  - `delta_writer.py`: Delta writes/upserts
-  - `schema_registry.py`: research/ingestion/cross-validation table schemas
-  - `pipeline_sink.py`: persists pipeline outputs to Delta Lake
-- `backend/core/ml`
-  - feature engineering, hard rejection rules, XGBoost scoring
-  - risk premium logic + explainability narrative layer
-- `backend/core/report`
-  - 9-section CAM `.docx` generator with banking layout
-- `backend/api/routes`
-  - `/api/v1/companies`, `/documents`, `/analyze`, `/status`, `/results`
-  - `/dd-input`, `/research`, `/explain`, `/report`, `/report/pdf`, `/health`
-  - `/companies/{id}/chat` for CAM chat (Gemini-first)
-- `backend/tasks`
-  - Celery app + analysis task wrapper
-- `backend/core/prefect_flow.py`
-  - Prefect 2.x flow wrapper
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)
+![XGBoost](https://img.shields.io/badge/XGBoost-ML_Scoring-EB0F00)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-## Required API Keys and Secrets
+</div>
 
-Keep the following in `.env`:
+<p align="center">
+  <img src="docs/screenshots/01_home.png" alt="Intelli-Credit landing page" width="800"/>
+</p>
 
-- `HUGGINGFACE_API_TOKEN`: Required for free LLM + Qwen2.5-VL OCR over Hugging Face router.
-- `FIRECRAWL_API_KEY`: Required for live web scraping/research.
-- `DATABRICKS_HOST`: Databricks workspace URL.
-- `DATABRICKS_TOKEN`: Databricks PAT.
-- `DATABRICKS_CLUSTER_ID`: Target Databricks cluster.
+---
 
-Optional fallbacks:
+## What it does
 
-- `CEREBRAS_API_KEY`
-- `GITHUB_TOKEN`
-- `ANTHROPIC_API_KEY`
+A credit officer at an NBFC or bank receives a corporate loan application as a mess of PDFs, scanned pages, GST returns, bank statements, and ITRs. Turning that into a defensible sanction decision takes days of manual work. **Intelli-Credit compresses that into an automated, auditable pipeline:**
 
-## Pipeline Structure
+1. **Ingest** multi-format documents (PDF / DOCX / CSV / XML / XLSX / JPEG / PNG) and OCR scanned pages with a vision-language model.
+2. **Cross-validate** GST vs. banking vs. ITR data to surface ITC mismatches, circular-trading patterns, and window-dressing.
+3. **Research** the borrower live on the web — MCA filings, eCourts litigation, adverse news, promoter background.
+4. **Score** risk with a rules engine + XGBoost model, and explain every point of the score with SHAP.
+5. **Generate** a 9-section Credit Appraisal Memo (`.docx` / PDF) with a plain-language rationale.
+6. Keep a **credit officer in the loop** — their due-diligence notes feed directly into the final score and memo.
 
-This implementation follows the target structure:
+---
 
-1. Multi-Source Data Input
-2. Document Processing Layer (PyMuPDF/pdfplumber + Qwen2.5-VL OCR via Hugging Face)
-3. Structured Knowledge Store (PostgreSQL + Qdrant + Delta Lake on Databricks/local Delta)
-4. Web Research Agent (Firecrawl live crawling, extraction, scoring)
-5. Risk Scoring Engine (rules + ML + explainability)
-6. CAM Generator (template-driven `.docx` with research narrative)
-7. Credit Officer Portal (upload, review, explainability, report download)
+## Screenshots
 
-## Deliverables Coverage (Hackathon 3 Pillars)
+| Document upload + live tool connectivity | Staged analysis pipeline |
+|---|---|
+| ![Upload](docs/screenshots/02_upload.png) | ![Pipeline](docs/screenshots/03_pipeline.png) |
 
-1. Data Ingestor (multi-format + high-latency pipeline):
-   - PDF/DOCX/CSV/XML/XLS/XLSX/JPEG/PNG upload support
-   - OCR stack: `pdfplumber` -> `Qwen2.5-VL (HF)` -> `Tesseract` fallback
-   - GST/Bank/ITR parsing + cross-validation + circular-trade heuristics
-   - Delta/Databricks sink via `backend/databricks/*`
+> The **Tool Connectivity** panel runs a live readiness check against Firecrawl (web research), the Qwen2.5-VL OCR model, and the LLM provider before each run.
 
-2. Research Agent ("Digital Credit Manager"):
-   - Firecrawl web scraping/crawling in `RESEARCH_MODE=live`
-   - MCA/eCourts/news/promoter checks + finding extraction/scoring
-   - Credit officer due-diligence input route (`/api/v1/companies/{id}/dd-input`)
-   - Human-in-the-loop integration into final score and CAM narrative
+A sample generated Credit Appraisal Memo is included at [`docs/sample_output/Sample_CAM_Vardhman_Agri.docx`](docs/sample_output/Sample_CAM_Vardhman_Agri.docx).
 
-3. Recommendation Engine:
-   - Explainable scoring: Rules + ML calibration + SHAP-style factors
-   - Decision output: recommendation, limit, pricing premium, rationale
-   - CAM generation to Word/PDF and Gemini-first CAM chat
-   - API: `/api/v1/companies/{id}/report`, `/api/v1/companies/{id}/report/pdf`,
-     `/api/v1/companies/{id}/chat`
-
-### Frontend
-- Existing Next.js app upgraded with advanced pages/components:
-  - upload pipeline view
-  - due diligence portal with real-time AI preview
-  - analysis results page (Five Cs radar, SHAP bars, timeline, research feed)
-  - explainability page with India-context glossary
-  - stress test panel + fraud fingerprint graph (D3)
-
-### Data + Tests
-- `scripts/generate_sample_data.py` creates:
-  - `data/sample_documents/sample_gstr3b.json`
-  - `data/sample_documents/sample_bank_statement.csv`
-  - `data/sample_documents/sample_annual_report.pdf`
-  - `data/sample_documents/sample_itr.json`
-  - `data/sample_documents/sample_research_findings.json`
-- Backend tests under `tests/backend/` (5 passing tests)
+---
 
 ## Architecture
 
-Detailed architecture: [ARCHITECTURE.md](./ARCHITECTURE.md)
+```mermaid
+flowchart LR
+  FE[Next.js Dashboard<br/>Upload · Live Logs · Charts · CAM] -->|REST + SSE| API[FastAPI Backend<br/>/api/v1]
+  API --> PG[(PostgreSQL)]
+  API --> QD[(Qdrant<br/>vector memory)]
+  API --> RD[(Redis)]
+  API --> WK[Celery Worker]
+  WK --> ML[Rules + XGBoost<br/>+ SHAP]
+  WK --> RES[Research Agent<br/>Firecrawl · MCA · eCourts]
+  WK --> CAM[CAM .docx / PDF<br/>Generator]
+```
 
-## Quick Start
+**Pipeline:** Multi-source input → Document processing (OCR + LLM parsing) → Structured knowledge store (SQL + vector + Delta) → Web research agent → Explainable risk scoring → CAM generation → Credit-officer portal.
 
-### 1) Environment
+Full detail in [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | Next.js 14, React 18, TailwindCSS, Recharts, D3, Zustand |
+| **Backend** | FastAPI, Pydantic, async SQLAlchemy, structured logging |
+| **ML / scoring** | XGBoost, scikit-learn, SHAP, hard-rejection rules engine |
+| **Document AI** | PyMuPDF + pdfplumber, Qwen2.5-VL OCR, Tesseract fallback |
+| **Research agent** | Firecrawl live crawling, LLM finding-extraction & scoring |
+| **LLMs** | Cerebras / Hugging Face / Gemini with automatic provider fallback |
+| **Data** | PostgreSQL, Qdrant (vectors), Delta Lake (local Spark / Databricks) |
+| **Orchestration** | Celery + Redis, Prefect flow wrapper |
+| **Infra** | Docker Compose (6-service stack) |
+
+---
+
+## Quick start
+
+The whole stack runs with one command — it works out of the box in **mock mode** (deterministic, no API keys required), which is ideal for a first run.
+
 ```bash
+git clone https://github.com/harshithh-18/Intelli-Credit.git
+cd Intelli-Credit
 cp .env.example .env
-```
-
-### 2) Start infra
-```bash
-docker run -d --name intelli_postgres -e POSTGRES_DB=intellicredit -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:16
-docker run -d --name intelli_qdrant -p 6333:6333 qdrant/qdrant:latest
-docker run -d --name intelli_redis -p 6379:6379 redis:7-alpine
-```
-
-### 3) Backend
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
-```
-
-### 4) Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend: `http://localhost:3000`  
-API docs: `http://localhost:8000/docs`
-
-## Docker Compose
-
-```bash
 docker compose up --build
 ```
 
-Services:
-- Postgres: `5432`
-- Qdrant: `6333`
-- Redis: `6379`
-- Backend: `8000`
-- Celery worker: background
-- Frontend: `3000`
+| Service | URL |
+|---|---|
+| Frontend dashboard | http://localhost:3000 |
+| API docs (Swagger) | http://localhost:8001/docs |
 
-## Generate Demo Data
+Then open the dashboard, enter a company name, upload the sample documents in [`data/sample_documents/`](data/sample_documents/), and run an appraisal.
 
-```bash
-source .venv/bin/activate
-python scripts/generate_sample_data.py
+### Enabling live mode (real AI)
+
+Mock mode needs no keys. For **live** OCR, web research, and LLM narratives, add these to `.env` (all have free tiers):
+
+| Variable | Provider | Notes |
+|---|---|---|
+| `CEREBRAS_API_KEY` | [Cerebras](https://cloud.cerebras.ai/) | Fast free LLM (`csk-...`). Primary provider. |
+| `QWEN_VL_API_KEY` | [Hugging Face](https://huggingface.co/settings/tokens) | Qwen2.5-VL OCR (`hf_...`). |
+| `FIRECRAWL_API_KEY` | [Firecrawl](https://www.firecrawl.dev/) | Live web crawling (`fc-...`). |
+
+Then set `RESEARCH_MODE=live` and restart. See [`.env.example`](.env.example) for the full list.
+
+> **Note:** do not wrap `.env` values in quotes — the values are passed through verbatim. Keep live-research volume modest (`MAX_RESEARCH_SOURCES_PER_COMPANY`) to stay within free-tier LLM rate limits.
+
+---
+
+## API surface (`/api/v1`)
+
+```
+POST /companies                      Create a borrower
+POST /companies/{id}/documents       Upload documents (multi-format)
+POST /companies/{id}/analyze         Run the appraisal pipeline
+GET  /companies/{id}/status          Live progress (SSE)
+POST /companies/{id}/dd-input        Credit-officer due-diligence input
+GET  /companies/{id}/results         Full result payload
+GET  /companies/{id}/explain         SHAP explainability
+GET  /companies/{id}/research        Research findings
+GET  /companies/{id}/report[/pdf]    Download the CAM
+POST /companies/{id}/chat            Chat over the CAM
 ```
 
-## API Surface (`/api/v1`)
+Every `/api/v1` response uses a standard envelope with a request ID, timestamp, and processing time.
 
-- `POST /api/v1/companies`
-- `POST /api/v1/companies/{id}/documents` (supports PDF/DOCX/CSV/XML/XLS/XLSX/JPEG/PNG)
-- `POST /api/v1/companies/{id}/analyze`
-- `GET /api/v1/companies/{id}/status` (SSE)
-- `POST /api/v1/companies/{id}/dd-input`
-- `GET /api/v1/companies/{id}/results`
-- `GET /api/v1/companies/{id}/report`
-- `GET /api/v1/companies/{id}/explain`
-- `GET /api/v1/companies/{id}/research`
-- `GET /api/v1/health`
+---
 
-All `/api/v1` responses use:
-```json
-{
-  "status": "success|error|processing",
-  "data": {},
-  "meta": {
-    "request_id": "uuid",
-    "timestamp": "ISO-8601",
-    "processing_time_ms": 0
-  }
-}
-```
-
-## Run Tests
+## Testing
 
 ```bash
-source .venv/bin/activate
+pip install -r requirements.txt
 pytest -q tests/backend
 ```
 
-## Notes
+---
 
-- Research layer supports:
-  - `RESEARCH_MODE=mock` (default deterministic mode)
-  - `RESEARCH_MODE=live` (Firecrawl + Hugging Face free LLM extraction; Anthropic optional)
-- Delta persistence is enabled automatically when Spark + Delta dependencies are available; set `SPARK_LOCAL_MODE=false` to use Databricks Connect.
-- Existing frontend remains Next.js (already integrated and running). The advanced Vite-style dashboard requirements are implemented functionally in current app pages/components.
+## Highlights for reviewers
+
+- **Explainability-first:** every credit decision ships with SHAP factor attribution and a plain-language narrative — no black-box scores.
+- **India-context modeling:** GST ITC-fraud thresholds, sector multipliers, MCA/eCourts checks, and RBI-aligned terminology.
+- **Resilient by design:** provider fallback chains for LLMs, OCR fallback to Tesseract, and a deterministic mock mode so demos never break.
+- **Human-in-the-loop:** credit-officer notes are fused into both the score and the final memo.
+
+---
+
+<div align="center">
+
+**Built by [Harshith Gottipati](https://github.com/harshithh-18)** · 
+
+</div>

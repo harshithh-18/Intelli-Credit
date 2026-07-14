@@ -28,8 +28,8 @@ HF_BASE_URL = settings.huggingface_base_url
 CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
 GITHUB_BASE_URL = "https://models.inference.ai.azure.com"
 
-MAX_RETRIES = 2
-RETRY_DELAY = 1.0
+MAX_RETRIES = 4
+RETRY_DELAY = 3.0
 TIMEOUT = 30
 
 SYSTEM_PROMPT = (

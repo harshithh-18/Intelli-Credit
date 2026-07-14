@@ -33,3 +33,5 @@ uploads/
 cache/
 ml/model/
 ml/data/
+outputs/
+delta_lake/
